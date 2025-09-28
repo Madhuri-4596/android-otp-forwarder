@@ -34,14 +34,17 @@ name: Build Android APK
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Clean project
+        run: ./gradlew clean --stacktrace
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -49,56 +52,11 @@ name: Build Android APK
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: app/build/outputs/apk/release/app-release.apk
-
-      - name: Create Release
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ github.run_number }}
-          release_name: Release v${{ github.run_number }}
-          body: |
-            ## 🚀 Android OTP Forwarder v${{ github.run_number }}
-
-            ### Features
-            - ✅ Persistent background service
-            - ✅ Offline message queuing
-            - ✅ Android 5-14+ compatibility
-            - ✅ Auto-restart after reboot
-            - ✅ Battery optimization handling
-
-            ### Downloads
-            - **app-debug.apk**: For testing (allows debugging)
-            - **app-release.apk**: For production use
-
-          draft: false
-          prerelease: false
-
-      - name: Upload Debug APK to Release
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/debug/app-debug.apk
-          asset_name: app-debug.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Upload Release APK to Release
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/release/app-release.apk
-          asset_name: app-release.apk
-          asset_content_type: application/vnd.android.package-archive
